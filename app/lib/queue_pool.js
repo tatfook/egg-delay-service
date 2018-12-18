@@ -10,16 +10,38 @@ const _worker = Symbol('worker');
 const _cache = Symbol('_cache');
 const _emitter = Symbol('_emitter');
 
+class SimpleQueue extends Array {
+  setLimit(limit) {
+    this.limit = limit;
+    this.push = this.limitedPush;
+  }
+
+  overLimit() {
+    return this.length >= this.limit;
+  }
+
+  limitedPush(...values) {
+    if (this.overLimit()) return false;
+    for (const value of values) {
+      super.push(value);
+    }
+    return true;
+  }
+}
+
 class SimpleQueuePool {
-  constructor(worker, concurrency = 1) {
+  constructor(worker, options) {
+    const { concurrency, queue_limit, cache_limit } = options;
     this[_working_pool] = {};
     this[_free_pool] = [];
     this[_cache] = [];
     this[_worker] = this.wrap(worker);
     this[_emitter] = new emitter();
     this[_emitter].await = awaitEvent;
+    this.cache_limit = (cache_limit || concurrency) * 2;
     for (let i = 0; i < concurrency; i++) {
-      const queue = [];
+      const queue = new SimpleQueue();
+      queue_limit && queue.setLimit(queue_limit, this[_cache]);
       this[_free_pool].push(queue);
     }
   }
@@ -30,45 +52,70 @@ class SimpleQueuePool {
       for (let params = queue.shift(); params; params = queue.shift()) {
         await worker(params);
       }
-      this[_free_pool].push(queue);
-      this[_working_pool][key] = undefined;
+      this.unbindKeyFromQueue(key, queue);
       this.consumeCache();
     };
   }
 
   consumeCache() {
     const cache = this[_cache];
-    const cache_length = cache.length / 2;
-    for (let i = 0; i < cache_length; i++) {
+    const total_keys = cache.length / 2;
+    for (let i = 0; i < total_keys; i++) {
       const key = cache.shift();
       const params = cache.shift();
       this.push(key, params);
     }
-    this.free && this[_emitter].emit('continue');
+    !this.highWaterLevel() && this[_emitter].emit('continue');
+  }
+
+  bindKeyToQueue(key, free_queue) {
+    this[_working_pool][key] = free_queue;
+  }
+
+  unbindKeyFromQueue(key, queue) {
+    this[_free_pool].push(queue);
+    this[_working_pool][key] = undefined;
+  }
+
+  pushIntoWorkingQueue(key, params) {
+    const pushed = this[_working_pool][key].push(params);
+    !pushed && this.pushIntoCache(key, params);
+  }
+
+  pushIntoFreeQueue(key, params) {
+    const free_queue = this[_free_pool].shift();
+    free_queue.push(params);
+    this.bindKeyToQueue(key, free_queue);
+    this[_worker](key);
+  }
+
+  pushIntoCache(key, params) {
+    this[_cache].push(key, params);
   }
 
   push(key, params) {
     assert(key, 'key required');
     assert(params, 'params required');
-    if (this[_working_pool][key]) {
-      this[_working_pool][key].push(params);
-      console.log(1);
-    } else if (this.free) {
-      const free_queue = this[_free_pool].shift();
-      free_queue.push(params);
-      this[_working_pool][key] = free_queue;
-      this[_worker](key);
-      console.log(2);
+    if (this.keyBindingQueue(key)) {
+      this.pushIntoWorkingQueue(key, params);
+    } else if (this.hasFreeQueue()) {
+      this.pushIntoFreeQueue(key, params);
     } else {
-      this[_cache].push(key, params);
-      // console.log(3);
-      return false;
+      this.pushIntoCache(key, params);
     }
-    return true;
+    return this.highWaterLevel();
   }
 
-  get free() {
+  hasFreeQueue() {
     return this[_free_pool].length > 0;
+  }
+
+  keyBindingQueue(key) {
+    return this[_working_pool][key];
+  }
+
+  highWaterLevel() {
+    return (!this.hasFreeQueue() || this[_cache].length > this.cache_limit);
   }
 
   continue() {

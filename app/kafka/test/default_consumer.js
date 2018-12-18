@@ -5,7 +5,7 @@ let paused = false;
 
 class MessageConsumer extends Subscription {
   formatMsg(message) {
-    message.value = JSON.parse(message.value);
+    message.value = message.value.toString();
   }
 
   pause() {
@@ -18,8 +18,8 @@ class MessageConsumer extends Subscription {
     paused = false;
   }
 
-  async pauseIfBusy(isFree) {
-    if (!isFree && !paused) {
+  async pauseIfBusy(highWaterLevel) {
+    if (highWaterLevel && !paused) {
       this.pause();
       await this.service.gitlab.continue();
       this.resume();
@@ -29,8 +29,8 @@ class MessageConsumer extends Subscription {
   async subscribe(message) {
     this.formatMsg(message);
     console.log('new_message');
-    const isFree = this.service.gitlab.paraCommit(message);
-    await this.pauseIfBusy(isFree);
+    const highWaterLevel = this.service.gitlab.paraCommit(message);
+    await this.pauseIfBusy(highWaterLevel);
   }
 }
 
