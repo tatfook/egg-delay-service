@@ -115,7 +115,7 @@ class SimpleQueuePool {
   }
 
   highWaterLevel() {
-    return (!this.hasFreeQueue() || this[_cache].length > this.cache_limit);
+    return this[_cache].length >= this.cache_limit;
   }
 
   continue() {
