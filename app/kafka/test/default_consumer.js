@@ -28,8 +28,7 @@ class MessageConsumer extends Subscription {
 
   async subscribe(message) {
     this.formatMsg(message);
-    console.log('new_message');
-    const highWaterLevel = this.service.gitlab.paraCommit(message);
+    const highWaterLevel = this.service.gitlab.paraSubmit(message);
     await this.pauseIfBusy(highWaterLevel);
   }
 }

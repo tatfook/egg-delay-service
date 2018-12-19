@@ -14,8 +14,8 @@ module.exports = {
           const result = await worker(...params);
           return result;
         } catch (err) {
-          await this.sleep(delay);
           if (i <= 1) throw err;
+          await this.sleep(delay);
           if (debug) console.log('retry');
         }
       }
