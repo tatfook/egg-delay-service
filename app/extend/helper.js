@@ -7,7 +7,7 @@ module.exports = {
     });
   },
   // decorator
-  attempt(worker, number = 3, delay = 3000) {
+  attempt(worker, number = 3, delay = 3000, debug = false) {
     return async (...params) => {
       for (let i = number; i > 0; i--) {
         try {
@@ -16,6 +16,7 @@ module.exports = {
         } catch (err) {
           await this.sleep(delay);
           if (i <= 1) throw err;
+          if (debug) console.log('retry');
         }
       }
     };
