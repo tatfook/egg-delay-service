@@ -25,15 +25,25 @@ module.exports = app => {
 
   const statics = CommitSchema.statics;
 
-  statics.lock = id => {
-    const key = id2Key(id);
+  statics.lock = ids => {
+    if (ids[Symbol.iterator] instanceof Function) {
+      const pipeline = redis.pipeline();
+      for (const id of ids) {
+        pipeline.incr(id2Key(id));
+      }
+      return pipeline.exec();
+    }
+    const key = id2Key(ids);
     return redis.incr(key);
   };
 
   statics.unLock = ids => {
     let keys;
-    if (ids instanceof Array) {
-      keys = ids.map(id => id2Key(id));
+    if (ids[Symbol.iterator] instanceof Function) {
+      const keys = [];
+      for (const id of ids) {
+        keys.push(id2Key(id));
+      }
     } else {
       keys = id2Key(ids);
     }
