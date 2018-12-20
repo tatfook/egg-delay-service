@@ -65,17 +65,19 @@ class GitlabService extends Service {
     return this.pool.push(msg.key, msg);
   }
 
-  handleError(err) {
+  async handleError(err, commit) {
+    await commit.lock();
     throw err;
   }
 
   async handleMessage(message) {
     try {
-      const commit = await this.ctx.model.Commit.findOne({ _id: message.value });
-      if (!commit) return;
+      const commit = await this.ctx.model.Commit
+        .findOne({ _id: message.value });
+      if (!commit || await commit.isLocked) return;
       const project_id = commit.id;
       await this.attemptToSubmit(project_id, commit)
-        .catch(this.handleError.bind(this));
+        .catch(async err => { await this.handleError(err, commit); });
       await commit.remove();
     } catch (err) {
       const { logger } = this.ctx;
