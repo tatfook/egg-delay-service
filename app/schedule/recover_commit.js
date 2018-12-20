@@ -31,13 +31,31 @@ class RecoverCommit extends Subscription {
     this.success_projects.set(project_id, true);
   }
 
-  syncRemoteLocks() {
+  async syncRemoteLock() {
     const ids_to_remote_lock = this.local_locked_projects.keys();
+    return this.remoteLock(ids_to_remote_lock);
+  }
+
+  async syncRemoteUnlock() {
+    const { model } = this.ctx;
     const ids_to_remote_unlock = this.success_projects.keys();
-    return Promise.all([
-      this.remoteLock(ids_to_remote_lock),
-      this.remoteUnlock(ids_to_remote_unlock),
-    ]);
+    for (const project_id of ids_to_remote_unlock) {
+      const commits = await model.Commit.find({ id: project_id });
+      if (commits.length > 0) {
+        this.local_locked_projects.set(project_id, true);
+        continue;
+      }
+      await this.remoteUnlock(project_id);
+    }
+  }
+
+  async syncRemoteLockStatus() {
+    try {
+      await this.syncRemoteUnlock();
+      await this.syncRemoteLock();
+    } catch (err) {
+      this.ctx.logger.error(err);
+    }
   }
 
   async recoverOne(commit) {
@@ -65,7 +83,7 @@ class RecoverCommit extends Subscription {
     ) {
       await this.recoverOne(commit);
     }
-    await this.syncRemoteLocks();
+    await this.syncRemoteLockStatus();
   }
 
   async runIfLastTaskNotRuning() {
