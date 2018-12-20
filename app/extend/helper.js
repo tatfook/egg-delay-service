@@ -6,6 +6,7 @@ module.exports = {
       setTimeout(resolve, time);
     });
   },
+
   // decorator
   attempt(worker, number = 3, delay = 3000, debug = false) {
     return async (...params) => {
