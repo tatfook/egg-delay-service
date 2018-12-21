@@ -58,16 +58,16 @@ class GitlabService extends Service {
   submit(project_id, commit) {
     const serialized_commit = serialize_commit(commit);
     return this.client
-      .post(`/projects/${project_id}/repository/commits`, serialized_commit);
+      .post(`/projects/${project_id}/repository/commits`, serialized_commit)
+      .catch(err => {
+        const ignorable = this.ignorable_error(err);
+        if (!ignorable) throw err;
+        this.ctx.logger.info('ignorable error');
+      });
   }
 
   paraSubmit(msg) {
     return this.pool.push(msg.key, msg);
-  }
-
-  async handleError(err, commit) {
-    await commit.lock();
-    throw err;
   }
 
   async handleMessage(message) {
@@ -83,6 +83,21 @@ class GitlabService extends Service {
       const { logger } = this.ctx;
       logger.error(err);
     }
+  }
+
+  ignorable_error(err) {
+    err.response = err.response || {};
+    err.response.data = err.response.data || {};
+    const err_message = err.response.data.message;
+    const ignorable = this.config.ignorable_error_messages;
+    return err_message && ignorable.includes(err_message);
+  }
+
+  async handleError(err, commit) {
+    const { logger } = this.ctx;
+    logger.error(err);
+    commit && await commit.lock();
+    throw err;
   }
 }
 

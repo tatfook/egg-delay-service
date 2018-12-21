@@ -65,8 +65,8 @@ class RecoverCommit extends Subscription {
     try {
       await service.gitlab.submit(project_id, commit);
     } catch (err) {
-      this.localLock(project_id);
       ctx.logger.error(err);
+      this.localLock(project_id);
       return;
     }
     await commit.remove();
