@@ -25,7 +25,7 @@
     "node": ">=8.9.0"
   },
   "scripts": {
-    "start": "egg-scripts start --daemon --title=egg-server-delayservice",
+    "start": "egg-scripts start --title=egg-server-delayservice",
     "stop": "egg-scripts stop --title=egg-server-delayservice",
     "dev": "egg-bin dev",
     "debug": "egg-bin debug",
