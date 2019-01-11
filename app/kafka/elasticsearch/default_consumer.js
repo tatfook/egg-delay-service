@@ -3,9 +3,9 @@
 const Subscription = require('egg').Subscription;
 let paused = false;
 
-class CommitMessageConsumer extends Subscription {
+class ESMessageConsumer extends Subscription {
   formatMsg(message) {
-    message.value = message.value.toString();
+    message.value = JSON.parse(message.value);
   }
 
   pause() {
@@ -21,16 +21,17 @@ class CommitMessageConsumer extends Subscription {
   async pauseIfBusy(highWaterLevel) {
     if (highWaterLevel && !paused) {
       this.pause();
-      await this.service.gitlab.continue();
+      await this.service.elasticsearch.continue();
       this.resume();
     }
   }
 
   async subscribe(message) {
     this.formatMsg(message);
-    const highWaterLevel = this.service.gitlab.paraSubmit(message);
+    // console.log(message);
+    const highWaterLevel = this.service.elasticsearch.paraSubmit(message);
     await this.pauseIfBusy(highWaterLevel);
   }
 }
 
-module.exports = CommitMessageConsumer;
+module.exports = ESMessageConsumer;
