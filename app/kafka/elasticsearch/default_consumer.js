@@ -9,7 +9,7 @@ class ESMessageConsumer extends BaseMessageConsumer {
 
   formatMsg(message) {
     console.log('incoming');
-    super.formatMsg(message);
+    message.value = JSON.parse(message.value.toString());
   }
 }
 

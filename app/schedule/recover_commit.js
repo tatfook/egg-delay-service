@@ -60,7 +60,7 @@ class RecoverCommit extends Subscription {
 
   async recoverOne(commit) {
     const { ctx, service } = this;
-    const project_id = commit.id;
+    const { project_id } = commit;
     if (this.isLocked(project_id)) return;
     try {
       await service.gitlab.submit(project_id, commit);

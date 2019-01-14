@@ -17,7 +17,7 @@ module.exports = app => {
 
   const CommitSchema = new Schema({
     branch: { type: String, default: 'master' },
-    id: String,
+    project_id: String,
     actions: [ ActionSchema ],
     commit_message: String,
     author_name: String,
@@ -26,7 +26,9 @@ module.exports = app => {
   const statics = CommitSchema.statics;
 
   statics.lock = ids => {
-    if (ids[Symbol.iterator] instanceof Function) {
+    if (!ids) {
+      return;
+    } else if (ids[Symbol.iterator] instanceof Function) {
       const pipeline = redis.pipeline();
       for (const id of ids) {
         pipeline.incr(id2Key(id));
@@ -39,7 +41,9 @@ module.exports = app => {
 
   statics.unLock = ids => {
     let keys;
-    if (ids[Symbol.iterator] instanceof Function) {
+    if (!ids) {
+      return;
+    } else if (ids[Symbol.iterator] instanceof Function) {
       const keys = [];
       for (const id of ids) {
         keys.push(id2Key(id));

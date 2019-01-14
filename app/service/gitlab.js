@@ -58,7 +58,7 @@ class GitlabService extends BaseParaService {
       const commit = await this.ctx.model.Commit
         .findOne({ _id: message.value });
       if (!commit || await commit.isLocked) return;
-      const project_id = commit.id;
+      const { project_id } = commit;
       await this.attemptToSubmit(project_id, commit)
         .catch(async err => { await this.handleError(err, commit); });
       await commit.remove();

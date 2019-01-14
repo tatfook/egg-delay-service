@@ -52,11 +52,15 @@ class BaseMessageConsumer extends Subscription {
   }
 
   async subscribe(message) {
-    this.formatMsg(message);
-    const { service, service_name } = this;
-    const highWaterLevel = service[service_name]
-      .paraHandle(message);
-    await this.pauseIfBusy(highWaterLevel);
+    const { service, service_name, ctx } = this;
+    try {
+      this.formatMsg(message);
+      const highWaterLevel = service[service_name]
+        .paraHandle(message);
+      await this.pauseIfBusy(highWaterLevel);
+    } catch (err) {
+      ctx.logger.error(err);
+    }
   }
 }
 
