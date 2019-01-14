@@ -5,6 +5,12 @@ const Subscription = require('egg').Subscription;
 const paused_status_pool = {};
 
 class BaseMessageConsumer extends Subscription {
+  // Override this method.The property service_name is
+  // the name when you call the service with
+  // this.ctx.service[service_name].If your consumer
+  // extends this base consumer, paraHandle method
+  // and continue method must be implemented in you
+  // service class.
   get service_name() {
     return 'service';
   }
@@ -14,7 +20,8 @@ class BaseMessageConsumer extends Subscription {
   }
 
   get paused() {
-    return paused_status_pool[this.class_name];
+    const { class_name } = this;
+    return paused_status_pool[class_name];
   }
 
   formatMsg(message) {
@@ -22,26 +29,32 @@ class BaseMessageConsumer extends Subscription {
   }
 
   pause() {
-    this.ctx.consumer.pause();
-    paused_status_pool[this.class_name] = true;
+    const { ctx, class_name } = this;
+    ctx.consumer.pause();
+    paused_status_pool[class_name] = true;
+    ctx.logger.info('paused');
   }
 
   resume() {
-    this.ctx.consumer.resume();
-    paused_status_pool[this.class_name] = false;
+    const { ctx, class_name } = this;
+    ctx.consumer.resume();
+    paused_status_pool[class_name] = false;
+    ctx.logger.info('resumed');
   }
 
   async pauseIfBusy(highWaterLevel) {
     if (highWaterLevel && !this.paused) {
+      const { service, service_name } = this;
       this.pause();
-      await this.service[this.service_name].continue();
+      await service[service_name].continue();
       this.resume();
     }
   }
 
   async subscribe(message) {
     this.formatMsg(message);
-    const highWaterLevel = this.service[this.service_name]
+    const { service, service_name } = this;
+    const highWaterLevel = service[service_name]
       .paraHandle(message);
     await this.pauseIfBusy(highWaterLevel);
   }

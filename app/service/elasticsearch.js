@@ -1,19 +1,21 @@
 'use strict';
 
-const Service = require('egg').Service;
+const BaseParaService = require('./base_para_service');
 const Axios = require('axios');
-const SimpleQueuePool = require('../lib/queue_pool');
 
 let client;
-let pool;
 
-class ElasticsearchService extends Service {
+class ElasticsearchService extends BaseParaService {
+  get service_name() {
+    return 'elasticsearch';
+  }
+
   get client() {
     if (!client) {
       if (!client) {
         const config = this.config.elasticsearch;
         client = Axios.create({
-          baseURL: `${config.url}/v0`,
+          baseURL: `${config.url}`,
           headers: { Authorization: config.token },
           timeout: 30 * 1000,
         });
@@ -22,34 +24,14 @@ class ElasticsearchService extends Service {
     }
   }
 
-  get highWaterLevel() {
-    return this.pool.highWaterLevel();
-  }
-
-  continue() {
-    return this.pool.continue();
-  }
-
-  get pool() {
-    if (!pool) {
-      const options = this.config.elasticsearch.queue_pool;
-      pool = new SimpleQueuePool(this.handleMessage.bind(this), options);
-    }
-    return pool;
-  }
-
   async handleMessage(message) {
     try {
-      await this.ctx.helper.sleep(500);
+      await this.ctx.helper.sleep(100);
       console.log(message);
     } catch (err) {
       const { logger } = this.ctx;
       logger.error(err);
     }
-  }
-
-  paraHandle(msg) {
-    return this.pool.push(msg.key, msg);
   }
 
   async bulk(body, index, type) {
