@@ -40,14 +40,15 @@ class ElasticsearchService extends Service {
 
   async handleMessage(message) {
     try {
-      console.log(message.value.actions);
+      await this.ctx.helper.sleep(500);
+      console.log(message);
     } catch (err) {
       const { logger } = this.ctx;
       logger.error(err);
     }
   }
 
-  paraSubmit(msg) {
+  paraHandle(msg) {
     return this.pool.push(msg.key, msg);
   }
 

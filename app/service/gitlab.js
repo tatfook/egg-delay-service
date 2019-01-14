@@ -66,7 +66,7 @@ class GitlabService extends Service {
       });
   }
 
-  paraSubmit(msg) {
+  paraHandle(msg) {
     return this.pool.push(msg.key, msg);
   }
 
