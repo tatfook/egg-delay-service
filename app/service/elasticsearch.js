@@ -83,7 +83,7 @@ class ElasticsearchService extends BaseParaService {
     try {
       const body = await this.getBulkBody(message);
       const { index, type } = this.config.elasticsearch.meta.page;
-      await this.bulk(body, index, type);
+      if (body.length > 0) await this.bulk(body, index, type);
     } catch (err) {
       const { logger } = this.ctx;
       logger.error(err);
@@ -105,7 +105,8 @@ class ElasticsearchService extends BaseParaService {
 
   async parseMarkdown(data) {
     const { service } = this;
-    const content = data.content || data.doc.content;
+    const content = data.doc ? data.doc.content : data.content;
+    if (!content) return data;
     const res = await service.keepwork.parseMarkdown(content);
     if (data.content) {
       data.content = res.data.content;
