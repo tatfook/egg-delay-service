@@ -6,12 +6,12 @@ const Axios = require('axios');
 let client;
 
 class OperationParser {
-  static parse(operation, visibility) {
+  static parse(operation, datetime, visibility) {
     const { action } = operation;
     const meta = OperationParser.getMeta(operation);
     const bulk = [ meta ];
     if (action !== 'delete') {
-      const data = OperationParser[action](operation, visibility);
+      const data = OperationParser[action](operation, datetime, visibility);
       bulk.push(data);
     }
     return bulk;
@@ -32,11 +32,13 @@ class OperationParser {
     return { [action]: { _id } };
   }
 
-  static create(operation, visibility) {
+  static create(operation, datetime, visibility) {
     const [
       url, title, site, username,
     ] = OperationParser.getPageInfoFromPath(operation);
-    const { content, create_at, update_at } = operation;
+    const { content } = operation;
+    const create_at = datetime;
+    const update_at = datetime;
     const id = operation._id;
     const data = {
       url, title, site, username, id, content,
@@ -45,15 +47,16 @@ class OperationParser {
     return data;
   }
 
-  static update(operation) {
-    const { content, update_at } = operation;
+  static update(operation, datetime) {
+    const { content } = operation;
+    const update_at = datetime;
     const data = { doc: { content, update_at } };
     return data;
   }
 
-  static move(operation) {
+  static move(operation, datetime) {
     const [ url, title ] = OperationParser.getPageInfoFromPath(operation);
-    const { update_at } = operation;
+    const update_at = datetime;
     const data = { doc: { url, title, update_at } };
     return data;
   }
@@ -112,8 +115,8 @@ class ElasticsearchService extends BaseParaService {
     return data;
   }
 
-  async operation2Bulk(operation, visibility) {
-    const bulk = OperationParser.parse(operation, visibility);
+  async operation2Bulk(operation, datetime, visibility) {
+    const bulk = OperationParser.parse(operation, datetime, visibility);
     const data = bulk[1];
     if (data) bulk[1] = await this.parseMarkdown(data);
     return bulk;
@@ -122,12 +125,13 @@ class ElasticsearchService extends BaseParaService {
   async getBulkBody(message) {
     const operations = message.value.actions;
     const { visibility } = message.value;
+    const datetime = message.value.createdAt;
     const body = [];
     for (const operation of operations) {
       try {
         if (!this.isPage(operation)) continue;
         const [ meta, data ] = await this
-          .operation2Bulk(operation, visibility);
+          .operation2Bulk(operation, datetime, visibility);
         body.push(meta);
         if (data) body.push(data);
       } catch (err) {
