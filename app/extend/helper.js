@@ -22,4 +22,11 @@ module.exports = {
       }
     };
   },
+
+  endsWithAny(str, list) {
+    for (const item of list) {
+      if (str.endsWith(item)) return true;
+    }
+    return false;
+  },
 };

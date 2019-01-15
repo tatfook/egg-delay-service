@@ -8,15 +8,13 @@ let client;
 class KeepworkService extends Service {
   get client() {
     if (!client) {
-      if (!client) {
-        const config = this.config.keepwork;
-        client = Axios.create({
-          baseURL: `${config.url}/`,
-          timeout: 30 * 1000,
-        });
-      }
-      return client;
+      const config = this.config.keepwork;
+      client = Axios.create({
+        baseURL: `${config.url}/`,
+        timeout: 30 * 1000,
+      });
     }
+    return client;
   }
 
   parseMarkdown(content) {
