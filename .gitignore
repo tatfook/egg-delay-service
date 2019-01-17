@@ -13,3 +13,4 @@ run/
 yarn.lock
 config.local.js
 config.prod.js
+config.unittest.js
