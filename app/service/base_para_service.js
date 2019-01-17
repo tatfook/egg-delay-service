@@ -1,7 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
-const SimpleQueuePool = require('../lib/queue_pool');
+const QueuePool = require('../lib/queue_pool');
 
 const queue_pools = {};
 
@@ -24,7 +24,7 @@ class BaseParaService extends Service {
     const { service_name } = this;
     if (!queue_pools[service_name]) {
       const options = this.config[service_name].queue_pool;
-      queue_pools[service_name] = new SimpleQueuePool(
+      queue_pools[service_name] = new QueuePool(
         this.handleMessage.bind(this),
         options
       );
@@ -44,8 +44,8 @@ class BaseParaService extends Service {
     }
   }
 
-  paraHandle(msg) {
-    return this.pool.push(msg.key, msg);
+  paraHandle(message) {
+    return this.pool.push(message.key, message);
   }
 }
 

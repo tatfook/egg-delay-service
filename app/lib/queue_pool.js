@@ -3,6 +3,7 @@
 const assert = require('assert');
 const emitter = require('events');
 const awaitEvent = require('await-event');
+const Queue = require('./queue');
 
 const _working_pool = Symbol('working_pool');
 const _free_pool = Symbol('free_pool');
@@ -10,38 +11,20 @@ const _worker = Symbol('worker');
 const _cache = Symbol('_cache');
 const _emitter = Symbol('_emitter');
 
-class SimpleQueue extends Array {
-  setLimit(limit) {
-    this.limit = limit;
-    this.push = this.limitedPush;
-  }
-
-  overLimit() {
-    return this.length >= this.limit;
-  }
-
-  limitedPush(...values) {
-    if (this.overLimit()) return false;
-    for (const value of values) {
-      super.push(value);
-    }
-    return true;
-  }
-}
-
-class SimpleQueuePool {
+class QueuePool {
   constructor(worker, options) {
-    const { concurrency, queue_limit, cache_limit } = options;
+    let { concurrency, queue_limit, cache_limit } = options;
+    concurrency = concurrency || 10;
+    cache_limit = cache_limit || 5;
+    queue_limit = queue_limit || 5;
     this[_working_pool] = {};
-    this[_free_pool] = [];
-    this[_cache] = [];
+    this[_free_pool] = new Queue(concurrency);
+    this[_cache] = new Queue(cache_limit * 2);
     this[_worker] = this.wrap(worker);
     this[_emitter] = new emitter();
     this[_emitter].await = awaitEvent;
-    this.cache_limit = (cache_limit || concurrency) * 2;
     for (let i = 0; i < concurrency; i++) {
-      const queue = new SimpleQueue();
-      queue_limit && queue.setLimit(queue_limit, this[_cache]);
+      const queue = new Queue(queue_limit);
       this[_free_pool].push(queue);
     }
   }
@@ -115,7 +98,7 @@ class SimpleQueuePool {
   }
 
   highWaterLevel() {
-    return this[_cache].length >= this.cache_limit;
+    return this[_cache].full;
   }
 
   continue() {
@@ -123,4 +106,4 @@ class SimpleQueuePool {
   }
 }
 
-module.exports = SimpleQueuePool;
+module.exports = QueuePool;

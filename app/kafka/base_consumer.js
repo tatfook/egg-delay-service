@@ -30,9 +30,9 @@ class BaseMessageConsumer extends Subscription {
 
   pause() {
     const { ctx, class_name } = this;
+    ctx.logger.info('paused');
     ctx.consumer.pause();
     paused_status_pool[class_name] = true;
-    ctx.logger.info('paused');
   }
 
   resume() {
