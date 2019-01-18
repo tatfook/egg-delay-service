@@ -8,9 +8,7 @@ class ESMessageConsumer extends BaseMessageConsumer {
   }
 
   formatMsg(message) {
-    console.log('incoming');
     message.value = JSON.parse(message.value.toString());
-    console.log(message);
   }
 }
 
