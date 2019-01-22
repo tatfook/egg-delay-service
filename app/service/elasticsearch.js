@@ -2,6 +2,7 @@
 
 const BaseParaService = require('./base_para_service');
 const Axios = require('axios');
+const assert = require('assert');
 
 class OperationParser {
   static parse(operation, datetime, visibility) {
@@ -79,13 +80,36 @@ module.exports = app => {
 
     async handleMessage(message) {
       try {
-        const body = await this.getBulkBody(message);
-        const { index, type } = this.config.elasticsearch.meta.page;
-        if (body.length > 0) await this.bulk(body, index, type);
+        const handler_name = this.route(message);
+        await this[handler_name](message);
       } catch (err) {
         const { logger } = this.ctx;
         logger.error(err);
       }
+    }
+
+    route(message) {
+      const handler_name = message.value.method || 'syncPage';
+      return handler_name;
+    }
+
+    async syncPage(message) {
+      const body = await this.getBulkBody(message);
+      const { index, type } = this.config.elasticsearch.meta.page;
+      if (body.length > 0) await this.bulk(body, index, type);
+    }
+
+    updateSiteVisibility(message) {
+      const { path, visibility } = message.value;
+      assert(path);
+      assert(visibility);
+      return this.client.put(`/sites/${path}/visibility`, { visibility });
+    }
+
+    deleteSite(message) {
+      const { path } = message.value;
+      assert(path);
+      return this.client.delete(`/sites/${path}`);
     }
 
     bulk(body, index, type) {
