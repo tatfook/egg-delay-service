@@ -40,7 +40,7 @@ class RecoverCommit extends Subscription {
     const { model } = this.ctx;
     const ids_to_remote_unlock = this.success_projects.keys();
     for (const project_id of ids_to_remote_unlock) {
-      const commits = await model.Commit.find({ id: project_id });
+      const commits = await model.Commit.find({ project_id });
       if (commits.length > 0) {
         this.local_locked_projects.set(project_id, true);
         continue;

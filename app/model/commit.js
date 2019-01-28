@@ -28,47 +28,47 @@ module.exports = app => {
   statics.lock = ids => {
     if (!ids) {
       return;
-    } else if (ids[Symbol.iterator] instanceof Function) {
-      const pipeline = redis.pipeline();
-      for (const id of ids) {
-        pipeline.incr(id2Key(id));
-      }
-      return pipeline.exec();
+    } else if (Number(ids)) {
+      const key = id2Key(ids);
+      return redis.incr(key);
     }
-    const key = id2Key(ids);
-    return redis.incr(key);
+    const pipeline = redis.pipeline();
+    for (const id of ids) {
+      pipeline.incr(id2Key(id));
+    }
+    return pipeline.exec();
   };
 
   statics.unLock = ids => {
     let keys;
     if (!ids) {
       return;
-    } else if (ids[Symbol.iterator] instanceof Function) {
+    } else if (Number(ids)) {
+      keys = id2Key(ids);
+    } else {
       const keys = [];
       for (const id of ids) {
         keys.push(id2Key(id));
       }
-    } else {
-      keys = id2Key(ids);
     }
     return redis.del(keys);
   };
 
-  statics.isLocked = id => {
-    const key = id2Key(id);
+  statics.isLocked = project_id => {
+    const key = id2Key(project_id);
     return redis.get(key);
   };
 
   CommitSchema.methods.lock = function() {
-    return statics.lock(this.id);
+    return statics.lock(this.project_id);
   };
 
   CommitSchema.methods.unLock = function() {
-    return statics.unLock(this.id);
+    return statics.unLock(this.project_id);
   };
 
   CommitSchema.virtual('isLocked').get(function() {
-    return statics.isLocked(this.id);
+    return statics.isLocked(this.project_id);
   });
 
   return mongoose.model('Commit', CommitSchema);
