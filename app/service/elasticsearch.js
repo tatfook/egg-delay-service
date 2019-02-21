@@ -163,6 +163,10 @@ module.exports = app => {
       }
       return body;
     }
+
+    async upsertPackage(pkg) {
+      return this.client.post(`/packages/${pkg.id}/upsert`, pkg);
+    }
   }
 
   return ElasticsearchService;
