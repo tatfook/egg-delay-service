@@ -28,7 +28,7 @@ class RecoverES extends Subscription {
     while (pkgs.length > 0) {
       const tasks = [];
       for (const pkg of pkgs) {
-        if (pkg.auditAt) tasks.push(this.recoverOne(pkg));
+        if (pkg.state === 2) tasks.push(this.recoverOne(pkg));
       }
       await Promise.all(tasks);
       page++;
