@@ -105,6 +105,6 @@ class RecoverCommit extends Subscription {
 }
 
 module.exports = app => {
-  RecoverCommit.schedule = app.config.schedule;
+  RecoverCommit.schedule = app.config.schedule.recover_commit;
   return RecoverCommit;
 };
