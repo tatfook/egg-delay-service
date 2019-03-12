@@ -14,3 +14,8 @@ exports.redis = {
   enable: true,
   package: 'egg-redis',
 };
+
+exports.grpc = {
+  enable: true,
+  package: 'egg-grpc',
+};

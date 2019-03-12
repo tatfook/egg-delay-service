@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package gitaly;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "gitalypb";
+
+message Repository {
+  // DEPRECATED: https://gitlab.com/gitlab-org/gitaly/issues/151
+  reserved 1;
+  reserved "path";
+
+  string storage_name = 2;
+  string relative_path = 3;
+  // Sets the GIT_OBJECT_DIRECTORY envvar on git commands to the value of this field.
+  // It influences the object storage directory the SHA1 directories are created underneath.
+  string git_object_directory = 4;
+  // Sets the GIT_ALTERNATE_OBJECT_DIRECTORIES envvar on git commands to the values of this field.
+  // It influences the list of Git object directories which can be used to search for Git objects.
+  repeated string git_alternate_object_directories = 5;
+  // Used in callbacks to GitLab so that it knows what repository the event is
+  // associated with. May be left empty on RPC's that do not perform callbacks.
+  // During project creation, `gl_repository` may not be known.
+  string gl_repository = 6;
+  // The human-readable GitLab project name (e.g. gitlab-org/gitlab-ce).
+  // When hashed storage is use, this associates a project name with its
+  // path on disk. The name can change over time (e.g. when a project is
+  // renamed). This is primarily used for logging/debugging at the
+  // moment.
+  string gl_project_name = 7;
+}
+
+// Corresponds to Gitlab::Git::Commit
+message GitCommit {
+  string id = 1;
+  bytes subject = 2;
+  bytes body = 3;
+  CommitAuthor author = 4;
+  CommitAuthor committer = 5;
+  repeated string parent_ids = 6;
+  // If body exceeds a certain threshold, it will be nullified,
+  // but its size will be set in body_size so we can know if
+  // a commit had a body in the first place.
+  int64 body_size = 7;
+}
+
+message CommitAuthor {
+  bytes name = 1;
+  bytes email = 2;
+  google.protobuf.Timestamp date = 3;
+}
+
+message ExitStatus {
+  int32 value = 1;
+}
+
+// Corresponds to Gitlab::Git::Branch
+message Branch {
+  bytes name = 1;
+  GitCommit target_commit = 2;
+}
+
+message Tag {
+  bytes name = 1;
+  string id = 2;
+  GitCommit target_commit = 3;
+  // If message exceeds a certain threshold, it will be nullified,
+  // but its size will be set in message_size so we can know if
+  // a tag had a message in the first place.
+  bytes message = 4;
+  int64 message_size = 5;
+  CommitAuthor tagger = 6;
+}
+
+message User {
+  string gl_id = 1;
+  bytes name = 2;
+  bytes email = 3;
+  string gl_username = 4;
+}
