@@ -4,12 +4,13 @@
   "description": "keepwork delay job service",
   "private": true,
   "dependencies": {
+    "axios": "^0.18.0",
     "egg": "^2.2.1",
-    "egg-scripts": "^2.5.0",
-    "egg-redis": "^2.0.0",
-    "egg-mongoose": "^3.1.0",
+    "egg-grpc": "^1.0.3",
     "egg-keepwork-kafkajs": "^0.0.7",
-    "axios": "^0.18.0"
+    "egg-mongoose": "^3.1.0",
+    "egg-redis": "^2.0.0",
+    "egg-scripts": "^2.5.0"
   },
   "devDependencies": {
     "autod": "^3.0.1",
