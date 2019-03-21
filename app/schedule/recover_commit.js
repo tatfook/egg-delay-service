@@ -63,7 +63,7 @@ class RecoverCommit extends Subscription {
     const { project_id } = commit;
     if (this.isLocked(project_id)) return;
     try {
-      await service.gitlab.submit(project_id, commit);
+      await service.gitlab.submit(commit);
     } catch (err) {
       ctx.logger.error(err);
       this.localLock(project_id);

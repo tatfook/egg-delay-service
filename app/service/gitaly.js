@@ -44,9 +44,10 @@ class GitalyService extends Service {
   }
 
   getRepo(commit) {
+    const { repo } = commit;
     return {
-      storage_name: this.storage_name,
-      relative_path: `${commit.git_path}.git`,
+      storage_name: repo.storage_name,
+      relative_path: repo.path,
     };
   }
 

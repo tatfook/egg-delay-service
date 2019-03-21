@@ -8,6 +8,7 @@ module.exports = app => {
   const redis = app.redis;
 
   const ActionSchema = new Schema({
+    _id: String,
     action: String,
     file_path: String,
     previous_path: String,
@@ -15,9 +16,16 @@ module.exports = app => {
     encoding: { type: String, default: 'text' },
   });
 
+  const RepoSchema = new Schema({
+    path: String,
+    storage_name: String,
+  });
+
   const CommitSchema = new Schema({
     branch: { type: String, default: 'master' },
+    visibility: { type: String, default: 'public' },
     project_id: String,
+    repo: RepoSchema,
     actions: [ ActionSchema ],
     commit_message: String,
     author_name: String,
