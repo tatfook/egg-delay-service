@@ -4,10 +4,12 @@ const BaseParaService = require('./base_para_service');
 const assert = require('assert');
 const Axios = require('axios');
 
+const default_branch = 'master';
+
 const serialize_commit = commit => {
   assert(commit.actions, 'action required');
   return {
-    branch: commit.branch || 'master',
+    branch: commit.branch || default_branch,
     commit_message: commit.commit_message,
     actions: commit.actions,
     author_name: commit.author_name,
@@ -40,25 +42,40 @@ module.exports = app => {
       return attemptToSubmit;
     }
 
-    submit(project_id, commit) {
+    async submit(project_id, commit) {
       const serialized_commit = serialize_commit(commit);
-      return this.client
+      const res = await this.client
         .post(`/projects/${project_id}/repository/commits`, serialized_commit)
         .catch(err => {
           const ignorable = this.ignorable_error(err);
           if (!ignorable) throw err;
           this.ctx.logger.info('ignorable error');
         });
+      return res.data;
+    }
+
+    async load_commits(project_id) {
+      const res = await this.client
+        .get(`/projects/${project_id}/repository/commits?all=true`);
+      const commits = res.data;
+      return commits;
     }
 
     async handleMessage(message) {
+      const { ctx } = this;
       try {
-        const commit = await this.ctx.model.Commit
+        const commit = await ctx.model.Commit
           .findOne({ _id: message.value });
         if (!commit || await commit.isLocked) return;
         const { project_id } = commit;
-        await this.attemptToSubmit(project_id, commit)
+        const commit_info = await this.attemptToSubmit(project_id, commit)
           .catch(async err => { await this.handleError(err, commit); });
+        const project = await ctx.model.Project.findById(project_id);
+        if (project.commits.length === 0) {
+          project.commits = await this.load_commits(project_id);
+        }
+        project.commits.push(commit_info);
+        await project.save();
         await commit.remove();
       } catch (err) {
         const { logger } = this.ctx;

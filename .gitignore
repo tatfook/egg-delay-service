@@ -16,3 +16,4 @@ config.prod.js
 config.unittest.js
 app/service/test.js
 app/kafka/test/*
+app/kafka/commit_dev
