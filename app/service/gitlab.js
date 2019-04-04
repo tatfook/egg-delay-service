@@ -73,8 +73,9 @@ module.exports = app => {
         const project = await ctx.model.Project.findById(project_id);
         if (project.commits.length === 0) {
           project.commits = await this.load_commits(project_id);
+        } else {
+          project.commits.push(commit_info);
         }
-        project.commits.push(commit_info);
         await project.save();
         await commit.remove();
       } catch (err) {
