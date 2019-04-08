@@ -11,6 +11,8 @@ module.exports = app => {
     authored_date: String,
     created_at: String,
     message: String,
+    version: Number,
+    source_version: Number,
   });
 
   const ProjectSchema = new Schema({
@@ -28,6 +30,14 @@ module.exports = app => {
   CommitSchema.virtual('id')
     .get(function() { return this._id; })
     .set(function(value) { this._id = value; });
+
+  ProjectSchema.methods.fillVersion = function() {
+    let version = 1;
+    for (const commit of this.commits) {
+      commit.version = version;
+      version++;
+    }
+  };
 
   return mongoose.model('Project', ProjectSchema);
 };

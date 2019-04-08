@@ -60,15 +60,19 @@ class RecoverCommit extends Subscription {
 
   async recoverOne(commit) {
     const { ctx, service } = this;
-    const { project_id } = commit;
+    const { project_id, source_version } = commit;
     if (this.isLocked(project_id)) return;
     try {
       const commit_info = await service.gitlab
         .submit(project_id, commit);
       const project = await ctx.model.Project.findById(project_id);
-      if (project.commits.length === 0) {
-        project.commits = await this.load_commits(project_id);
+      const length = project.commits.length;
+      if (length === 0) {
+        project.commits = await service.gitlab.load_commits(project_id);
+        project.fillVersion();
       } else {
+        commit_info.version = length + 1;
+        commit_info.source_version = source_version;
         project.commits.push(commit_info);
       }
       await project.save();

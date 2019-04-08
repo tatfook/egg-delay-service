@@ -21,6 +21,7 @@ module.exports = app => {
     actions: [ ActionSchema ],
     commit_message: String,
     author_name: String,
+    source_version: Number,
   }, { timestamps: true });
 
   const statics = CommitSchema.statics;

@@ -67,13 +67,17 @@ module.exports = app => {
         const commit = await ctx.model.Commit
           .findOne({ _id: message.value });
         if (!commit || await commit.isLocked) return;
-        const { project_id } = commit;
+        const { project_id, source_version } = commit;
         const commit_info = await this.attemptToSubmit(project_id, commit)
           .catch(async err => { await this.handleError(err, commit); });
         const project = await ctx.model.Project.findById(project_id);
-        if (project.commits.length === 0) {
+        const length = project.commits.length;
+        if (length === 0) {
           project.commits = await this.load_commits(project_id);
+          project.fillVersion();
         } else {
+          commit_info.version = length + 1;
+          commit_info.source_version = source_version;
           project.commits.push(commit_info);
         }
         await project.save();
