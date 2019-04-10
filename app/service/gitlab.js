@@ -3,18 +3,32 @@
 const BaseParaService = require('./base_para_service');
 const assert = require('assert');
 const Axios = require('axios');
+const _ = require('lodash/object');
 
 const default_branch = 'master';
 
 const serialize_commit = commit => {
   assert(commit.actions, 'action required');
+  let {
+    branch, commit_message, actions,
+    author_name, source_version,
+  } = commit;
+
+  if (source_version) {
+    commit_message += `|FROM${source_version}`;
+  }
+
   return {
-    branch: commit.branch || default_branch,
-    commit_message: commit.commit_message,
-    actions: commit.actions,
-    author_name: commit.author_name,
+    branch: branch || default_branch,
+    commit_message, actions, author_name,
   };
 };
+
+const propertiesToPick = [
+  'short_id', 'author_name', 'authored_date',
+  'created_at', 'message',
+];
+const serializeCommitRecord = commit => _.pick(commit, propertiesToPick);
 
 module.exports = app => {
   let attemptToSubmit;
@@ -51,14 +65,7 @@ module.exports = app => {
           if (!ignorable) throw err;
           this.ctx.logger.info('ignorable error');
         });
-      return res.data;
-    }
-
-    async load_commits(project_id) {
-      const res = await this.client
-        .get(`/projects/${project_id}/repository/commits?all=true`);
-      const commits = res.data;
-      return commits;
+      return serializeCommitRecord(res.data);
     }
 
     async handleMessage(message) {
@@ -67,20 +74,10 @@ module.exports = app => {
         const commit = await ctx.model.Commit
           .findOne({ _id: message.value });
         if (!commit || await commit.isLocked) return;
-        const { project_id, source_version } = commit;
-        const commit_info = await this.attemptToSubmit(project_id, commit)
+        const { project_id } = commit;
+        const record = await this.attemptToSubmit(project_id, commit)
           .catch(async err => { await this.handleError(err, commit); });
-        const project = await ctx.model.Project.findById(project_id);
-        const length = project.commits.length;
-        if (length === 0) {
-          project.commits = await this.load_commits(project_id);
-          project.fillVersion();
-        } else {
-          commit_info.version = length + 1;
-          commit_info.source_version = source_version;
-          project.commits.push(commit_info);
-        }
-        await project.save();
+        await commit.pushRecord(record);
         await commit.remove();
       } catch (err) {
         const { logger } = this.ctx;
