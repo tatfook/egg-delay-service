@@ -78,6 +78,11 @@ module.exports = app => {
     return redis.del(keys);
   };
 
+  statics.resetLock = id => {
+    const key = id2Key(id);
+    return redis.set(key, 1);
+  };
+
   statics.isLocked = project_id => {
     const key = id2Key(project_id);
     return redis.get(key);
@@ -114,6 +119,10 @@ module.exports = app => {
 
   CommitSchema.methods.unLock = function() {
     return statics.unLock(this.project_id);
+  };
+
+  CommitSchema.methods.resetLock = function() {
+    return statics.resetLock(this.project_id);
   };
 
   CommitSchema.virtual('isLocked').get(function() {

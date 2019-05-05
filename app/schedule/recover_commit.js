@@ -5,6 +5,8 @@ const Subscription = require('egg').Subscription;
 let Runing = false;
 
 class RecoverCommit extends Subscription {
+  // 先本地存储锁定信息，待完成所有操作后再与远程锁同步
+  // 以减少io操作
   initLocalLocks() {
     this.local_locked_projects = new Map();
     this.success_projects = new Map();
@@ -29,6 +31,16 @@ class RecoverCommit extends Subscription {
 
   success(project_id) {
     this.success_projects.set(project_id, true);
+  }
+
+  // 错误重试一定次数后放弃操作
+  async giveUpAfterFailedForTimes(commit) {
+    const failed = await commit.isLocked;
+    const { max_fail } = this.config.gitlab;
+    if (Number(failed) >= max_fail) {
+      await commit.resetLock();
+      await commit.remove();
+    }
   }
 
   async syncRemoteLock() {
@@ -58,6 +70,8 @@ class RecoverCommit extends Subscription {
     }
   }
 
+  // 重试单个失败的gitlab操作
+  // 失败则锁定仓库，防止commit提交顺序发生错误
   async recoverOne(commit) {
     const { ctx, service } = this;
     const { project_id } = commit;
@@ -68,6 +82,7 @@ class RecoverCommit extends Subscription {
       await commit.pushRecord(record);
     } catch (err) {
       ctx.logger.error(err);
+      await this.giveUpAfterFailedForTimes(commit);
       this.localLock(project_id);
       return;
     }
@@ -88,6 +103,7 @@ class RecoverCommit extends Subscription {
     await this.syncRemoteLockStatus();
   }
 
+  // 防止单次任务未执行完毕就触发下一次任务
   async runIfLastTaskNotRuning() {
     if (Runing) return;
     const { logger } = this.ctx;
