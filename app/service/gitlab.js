@@ -58,14 +58,15 @@ module.exports = app => {
 
     async submit(project_id, commit) {
       const serialized_commit = serialize_commit(commit);
-      const res = await this.client
-        .post(`/projects/${project_id}/repository/commits`, serialized_commit)
-        .catch(err => {
-          const ignorable = this.ignorable_error(err);
-          if (!ignorable) throw err;
-          this.ctx.logger.info('ignorable error');
-        });
-      return serializeCommitRecord(res.data);
+      try {
+        const res = await this.client
+          .post(`/projects/${project_id}/repository/commits`, serialized_commit);
+        return serializeCommitRecord(res.data);
+      } catch (err) {
+        const ignorable = this.ignorable_error(err);
+        if (!ignorable) throw err;
+        this.ctx.logger.info('ignorable error');
+      }
     }
 
     async handleMessage(message) {
@@ -77,7 +78,7 @@ module.exports = app => {
         const { project_id } = commit;
         const record = await this.attemptToSubmit(project_id, commit)
           .catch(async err => { await this.handleError(err, commit); });
-        await commit.pushRecord(record);
+        if (record) await commit.pushRecord(record);
         await commit.remove();
       } catch (err) {
         const { logger } = this.ctx;
