@@ -7,12 +7,12 @@ const _ = require('lodash/object');
 
 const default_branch = 'master';
 
-const serialize_commit = commit => {
-  assert(commit.actions, 'action required');
+const serialize_commit = commitDetailMsg => {
+  assert(commitDetailMsg.actions, 'action required');
   let {
     branch, commit_message, actions,
     author_name, source_version,
-  } = commit;
+  } = commitDetailMsg;
 
   if (source_version) {
     commit_message += `|FROM${source_version}`;
@@ -24,11 +24,16 @@ const serialize_commit = commit => {
   };
 };
 
-const propertiesToPick = [
-  'short_id', 'author_name', 'authored_date',
+const COMMIT_PROPERTIES_TO_PICK = [
+  'id', 'short_id', 'author_name', 'authored_date',
   'created_at', 'message',
 ];
-const serializeCommitRecord = commit => _.pick(commit, propertiesToPick);
+const serializeCommitRecord = commit => {
+  const commit_id = commit.id;
+  const serialized = _.pick(commit, COMMIT_PROPERTIES_TO_PICK);
+  serialized.commit_id = commit_id;
+  return serialized;
+};
 
 module.exports = app => {
   let attemptToSubmit;
@@ -56,12 +61,14 @@ module.exports = app => {
       return attemptToSubmit;
     }
 
-    async submit(project_id, commit) {
-      const serialized_commit = serialize_commit(commit);
+    async submit(project_id, commitDetail) {
+      const { service } = this;
+      const serialized_commit = serialize_commit(commitDetail);
       try {
         const res = await this.client
           .post(`/projects/${project_id}/repository/commits`, serialized_commit);
-        return serializeCommitRecord(res.data);
+        const record = serializeCommitRecord(res.data);
+        await service.node.commitMany(commitDetail, record);
       } catch (err) {
         const ignorable = this.ignorable_error(err);
         if (!ignorable) throw err;
@@ -72,14 +79,13 @@ module.exports = app => {
     async handleMessage(message) {
       const { ctx } = this;
       try {
-        const commit = await ctx.model.Commit
+        const commitDetailMsg = await ctx.model.Message
           .findOne({ _id: message.value });
-        if (!commit || await commit.isLocked) return;
-        const { project_id } = commit;
-        const record = await this.attemptToSubmit(project_id, commit)
-          .catch(async err => { await this.handleError(err, commit); });
-        if (record) await commit.pushRecord(record);
-        await commit.remove();
+        if (!commitDetailMsg || await commitDetailMsg.isLocked) return;
+        const { project_id } = commitDetailMsg;
+        await this.attemptToSubmit(project_id, commitDetailMsg)
+          .catch(async err => { await this.handleError(err, commitDetailMsg); });
+        await commitDetailMsg.remove();
       } catch (err) {
         const { logger } = this.ctx;
         logger.error(err);
@@ -94,10 +100,10 @@ module.exports = app => {
       return err_message && ignorable.includes(err_message);
     }
 
-    async handleError(err, commit) {
+    async handleError(err, commitDetailMsg) {
       const { logger } = this.ctx;
       logger.error(err);
-      commit && await commit.lock();
+      commitDetailMsg && await commitDetailMsg.lock();
       throw err;
     }
   }

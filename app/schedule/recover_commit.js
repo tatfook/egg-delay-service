@@ -18,11 +18,11 @@ class RecoverCommit extends Subscription {
   }
 
   remoteLock(project_ids) {
-    return this.ctx.model.Commit.lock(project_ids);
+    return this.ctx.model.Message.lock(project_ids);
   }
 
   remoteUnlock(project_ids) {
-    return this.ctx.model.Commit.unLock(project_ids);
+    return this.ctx.model.Message.unLock(project_ids);
   }
 
   isLocked(project_id) {
@@ -52,7 +52,7 @@ class RecoverCommit extends Subscription {
     const { model } = this.ctx;
     const ids_to_remote_unlock = this.success_projects.keys();
     for (const project_id of ids_to_remote_unlock) {
-      const commits = await model.Commit.find({ project_id });
+      const commits = await model.Message.find({ project_id });
       if (commits.length > 0) {
         this.local_locked_projects.set(project_id, true);
         continue;
@@ -77,9 +77,7 @@ class RecoverCommit extends Subscription {
     const { project_id } = commit;
     if (this.isLocked(project_id)) return;
     try {
-      const record = await service.gitlab
-        .submit(project_id, commit);
-      await commit.pushRecord(record);
+      await service.gitlab.submit(project_id, commit);
     } catch (err) {
       ctx.logger.error(err);
       await this.giveUpAfterFailedForTimes(commit);
@@ -92,7 +90,7 @@ class RecoverCommit extends Subscription {
 
   async recoverAll() {
     const model = this.ctx.model;
-    const cursor = model.Commit.find({}).cursor();
+    const cursor = model.Message.find({}).cursor();
     for (
       let commit = await cursor.next();
       commit !== null;
