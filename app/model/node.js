@@ -18,6 +18,7 @@ module.exports = app => {
   const LastCommitSchema = new Schema({
     version: Number,
     source_version: Number,
+    author_name: String,
     message: String,
   }, { timestamps: true });
 
