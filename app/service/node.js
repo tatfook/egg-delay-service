@@ -12,7 +12,6 @@ class NodeService extends Service {
   }
 
   async commit(action, record) {
-    console.log(record);
     const { ctx } = this;
     const { _id, version } = action;
     const node = await ctx.model.Node.findOne({ _id });

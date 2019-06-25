@@ -72,19 +72,19 @@ class RecoverCommit extends Subscription {
 
   // 重试单个失败的gitlab操作
   // 失败则锁定仓库，防止commit提交顺序发生错误
-  async recoverOne(commit) {
+  async recoverOne(commitDetailMsg) {
     const { ctx, service } = this;
-    const { project_id } = commit;
+    const { project_id } = commitDetailMsg;
     if (this.isLocked(project_id)) return;
     try {
-      await service.gitlab.submit(project_id, commit);
+      await service.gitlab.submit(project_id, commitDetailMsg);
     } catch (err) {
       ctx.logger.error(err);
-      await this.giveUpAfterFailedForTimes(commit);
+      await this.giveUpAfterFailedForTimes(commitDetailMsg);
       this.localLock(project_id);
       return;
     }
-    await commit.remove();
+    await commitDetailMsg.remove();
     this.success(project_id);
   }
 
@@ -92,11 +92,11 @@ class RecoverCommit extends Subscription {
     const model = this.ctx.model;
     const cursor = model.Message.find({}).cursor();
     for (
-      let commit = await cursor.next();
-      commit !== null;
-      commit = await cursor.next()
+      let commitDetailMsg = await cursor.next();
+      commitDetailMsg !== null;
+      commitDetailMsg = await cursor.next()
     ) {
-      await this.recoverOne(commit);
+      await this.recoverOne(commitDetailMsg);
     }
     await this.syncRemoteLockStatus();
   }
